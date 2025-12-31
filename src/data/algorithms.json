@@ -1,0 +1,276 @@
+{
+  "sorting": {
+    "bubble-sort": {
+      "name": "Bubble Sort",
+      "description": "Simple sorting algorithm that repeatedly steps through the list, compares adjacent elements and swaps them if they are in the wrong order. The pass through the list is repeated until the list is sorted.",
+      "timeComplexity": {
+        "best": "O(n)",
+        "average": "O(n²)",
+        "worst": "O(n²)"
+      },
+      "spaceComplexity": "O(1)",
+      "stable": true,
+      "inPlace": true,
+      "adaptive": true,
+      "code": "function bubbleSort(arr) {\n  const n = arr.length;\n  for (let i = 0; i < n - 1; i++) {\n    for (let j = 0; j < n - i - 1; j++) {\n      if (arr[j] > arr[j + 1]) {\n        [arr[j], arr[j + 1]] = [arr[j + 1], arr[j]];\n      }\n    }\n  }\n  return arr;\n}",
+      "categories": ["sorting", "comparison-based", "stable"]
+    },
+    "insertion-sort": {
+      "name": "Insertion Sort",
+      "description": "Simple sorting algorithm that builds the final sorted array one item at a time. It is much less efficient on large lists than more advanced algorithms such as quicksort, heapsort, or merge sort.",
+      "timeComplexity": {
+        "best": "O(n)",
+        "average": "O(n²)",
+        "worst": "O(n²)"
+      },
+      "spaceComplexity": "O(1)",
+      "stable": true,
+      "inPlace": true,
+      "adaptive": true,
+      "code": "function insertionSort(arr) {\n  for (let i = 1; i < arr.length; i++) {\n    let key = arr[i];\n    let j = i - 1;\n    while (j >= 0 && arr[j] > key) {\n      arr[j + 1] = arr[j];\n      j--;\n    }\n    arr[j + 1] = key;\n  }\n  return arr;\n}",
+      "categories": ["sorting", "comparison-based", "stable"]
+    },
+    "selection-sort": {
+      "name": "Selection Sort",
+      "description": "Simple in-place comparison sorting algorithm. It divides the input list into a sorted and an unsorted region, and iteratively selects the smallest element from the unsorted region.",
+      "timeComplexity": {
+        "best": "O(n²)",
+        "average": "O(n²)",
+        "worst": "O(n²)"
+      },
+      "spaceComplexity": "O(1)",
+      "stable": false,
+      "inPlace": true,
+      "adaptive": false,
+      "code": "function selectionSort(arr) {\n  for (let i = 0; i < arr.length - 1; i++) {\n    let minIdx = i;\n    for (let j = i + 1; j < arr.length; j++) {\n      if (arr[j] < arr[minIdx]) minIdx = j;\n    }\n    [arr[i], arr[minIdx]] = [arr[minIdx], arr[i]];\n  }\n  return arr;\n}",
+      "categories": ["sorting", "comparison-based", "unstable"]
+    },
+    "merge-sort": {
+      "name": "Merge Sort",
+      "description": "Efficient, general-purpose, comparison-based sorting algorithm. Uses divide and conquer approach, dividing the list into sublists and merging them in sorted order.",
+      "timeComplexity": {
+        "best": "O(n log n)",
+        "average": "O(n log n)",
+        "worst": "O(n log n)"
+      },
+      "spaceComplexity": "O(n)",
+      "stable": true,
+      "inPlace": false,
+      "adaptive": false,
+      "code": "function mergeSort(arr) {\n  if (arr.length <= 1) return arr;\n  const mid = Math.floor(arr.length / 2);\n  const left = mergeSort(arr.slice(0, mid));\n  const right = mergeSort(arr.slice(mid));\n  return merge(left, right);\n}\n\nfunction merge(left, right) {\n  const result = [];\n  while (left.length && right.length) {\n    result.push(left[0] <= right[0] ? left.shift() : right.shift());\n  }\n  return [...result, ...left, ...right];\n}",
+      "categories": ["sorting", "comparison-based", "stable", "divide-and-conquer"]
+    },
+    "quick-sort": {
+      "name": "Quick Sort",
+      "description": "Efficient in-place sorting algorithm using divide and conquer. Selects a pivot element and partitions the array around it, recursively sorting the sub-arrays.",
+      "timeComplexity": {
+        "best": "O(n log n)",
+        "average": "O(n log n)",
+        "worst": "O(n²)"
+      },
+      "spaceComplexity": "O(log n)",
+      "stable": false,
+      "inPlace": true,
+      "adaptive": false,
+      "code": "function quickSort(arr, low = 0, high = arr.length - 1) {\n  if (low < high) {\n    const pi = partition(arr, low, high);\n    quickSort(arr, low, pi - 1);\n    quickSort(arr, pi + 1, high);\n  }\n  return arr;\n}\n\nfunction partition(arr, low, high) {\n  const pivot = arr[high];\n  let i = low - 1;\n  for (let j = low; j < high; j++) {\n    if (arr[j] < pivot) {\n      i++;\n      [arr[i], arr[j]] = [arr[j], arr[i]];\n    }\n  }\n  [arr[i + 1], arr[high]] = [arr[high], arr[i + 1]];\n  return i + 1;\n}",
+      "categories": ["sorting", "comparison-based", "unstable", "divide-and-conquer"]
+    },
+    "heap-sort": {
+      "name": "Heap Sort",
+      "description": "Comparison-based sorting algorithm that uses a binary heap data structure. It divides input into a sorted and unsorted region, iteratively shrinking the unsorted region.",
+      "timeComplexity": {
+        "best": "O(n log n)",
+        "average": "O(n log n)",
+        "worst": "O(n log n)"
+      },
+      "spaceComplexity": "O(1)",
+      "stable": false,
+      "inPlace": true,
+      "adaptive": false,
+      "code": "function heapSort(arr) {\n  const n = arr.length;\n  for (let i = Math.floor(n / 2) - 1; i >= 0; i--)\n    heapify(arr, n, i);\n  for (let i = n - 1; i > 0; i--) {\n    [arr[0], arr[i]] = [arr[i], arr[0]];\n    heapify(arr, i, 0);\n  }\n  return arr;\n}\n\nfunction heapify(arr, n, i) {\n  let largest = i, l = 2 * i + 1, r = 2 * i + 2;\n  if (l < n && arr[l] > arr[largest]) largest = l;\n  if (r < n && arr[r] > arr[largest]) largest = r;\n  if (largest !== i) {\n    [arr[i], arr[largest]] = [arr[largest], arr[i]];\n    heapify(arr, n, largest);\n  }\n}",
+      "categories": ["sorting", "comparison-based", "unstable"]
+    },
+    "counting-sort": {
+      "name": "Counting Sort",
+      "description": "Integer sorting algorithm that operates by counting the number of objects with distinct key values. Uses arithmetic to calculate the position of each object in the output sequence.",
+      "timeComplexity": {
+        "best": "O(n + k)",
+        "average": "O(n + k)",
+        "worst": "O(n + k)"
+      },
+      "spaceComplexity": "O(k)",
+      "stable": true,
+      "inPlace": false,
+      "adaptive": false,
+      "code": "function countingSort(arr) {\n  const max = Math.max(...arr);\n  const count = new Array(max + 1).fill(0);\n  const output = new Array(arr.length);\n  for (const num of arr) count[num]++;\n  for (let i = 1; i <= max; i++) count[i] += count[i - 1];\n  for (let i = arr.length - 1; i >= 0; i--) {\n    output[count[arr[i]] - 1] = arr[i];\n    count[arr[i]]--;\n  }\n  return output;\n}",
+      "categories": ["sorting", "non-comparison", "stable"]
+    },
+    "radix-sort": {
+      "name": "Radix Sort",
+      "description": "Non-comparative integer sorting algorithm that sorts data by grouping numbers by individual digits. Processes digits from least significant to most significant.",
+      "timeComplexity": {
+        "best": "O(nk)",
+        "average": "O(nk)",
+        "worst": "O(nk)"
+      },
+      "spaceComplexity": "O(n + k)",
+      "stable": true,
+      "inPlace": false,
+      "adaptive": false,
+      "code": "function radixSort(arr) {\n  const max = Math.max(...arr);\n  for (let exp = 1; Math.floor(max / exp) > 0; exp *= 10) {\n    countingSortByDigit(arr, exp);\n  }\n  return arr;\n}\n\nfunction countingSortByDigit(arr, exp) {\n  const n = arr.length;\n  const output = new Array(n);\n  const count = new Array(10).fill(0);\n  for (const num of arr) count[Math.floor(num / exp) % 10]++;\n  for (let i = 1; i < 10; i++) count[i] += count[i - 1];\n  for (let i = n - 1; i >= 0; i--) {\n    const digit = Math.floor(arr[i] / exp) % 10;\n    output[count[digit] - 1] = arr[i];\n    count[digit]--;\n  }\n  for (let i = 0; i < n; i++) arr[i] = output[i];\n}",
+      "categories": ["sorting", "non-comparison", "stable"]
+    }
+  },
+  "searching": {
+    "linear-search": {
+      "name": "Linear Search",
+      "description": "Simple search algorithm that checks each element of the list sequentially until a match is found or the whole list has been searched.",
+      "timeComplexity": {
+        "best": "O(1)",
+        "average": "O(n)",
+        "worst": "O(n)"
+      },
+      "spaceComplexity": "O(1)",
+      "code": "function linearSearch(arr, target) {\n  for (let i = 0; i < arr.length; i++) {\n    if (arr[i] === target) return i;\n  }\n  return -1;\n}",
+      "categories": ["searching", "sequential"]
+    },
+    "binary-search": {
+      "name": "Binary Search",
+      "description": "Efficient search algorithm that finds the position of a target value within a sorted array. Compares the target to the middle element and eliminates half of the remaining elements.",
+      "timeComplexity": {
+        "best": "O(1)",
+        "average": "O(log n)",
+        "worst": "O(log n)"
+      },
+      "spaceComplexity": "O(1)",
+      "code": "function binarySearch(arr, target) {\n  let left = 0, right = arr.length - 1;\n  while (left <= right) {\n    const mid = Math.floor((left + right) / 2);\n    if (arr[mid] === target) return mid;\n    if (arr[mid] < target) left = mid + 1;\n    else right = mid - 1;\n  }\n  return -1;\n}",
+      "categories": ["searching", "divide-and-conquer"]
+    },
+    "jump-search": {
+      "name": "Jump Search",
+      "description": "Search algorithm for sorted arrays. Works by skipping fixed number of elements and then performing linear search in smaller range.",
+      "timeComplexity": {
+        "best": "O(1)",
+        "average": "O(√n)",
+        "worst": "O(√n)"
+      },
+      "spaceComplexity": "O(1)",
+      "code": "function jumpSearch(arr, target) {\n  const n = arr.length;\n  const step = Math.floor(Math.sqrt(n));\n  let prev = 0;\n  while (arr[Math.min(step, n) - 1] < target) {\n    prev = step;\n    step += Math.floor(Math.sqrt(n));\n    if (prev >= n) return -1;\n  }\n  while (arr[prev] < target) {\n    prev++;\n    if (prev === Math.min(step, n)) return -1;\n  }\n  return arr[prev] === target ? prev : -1;\n}",
+      "categories": ["searching", "block-based"]
+    }
+  },
+  "trees": {
+    "binary-tree-traversal": {
+      "name": "Binary Tree Traversal",
+      "description": "Methods to visit all nodes in a binary tree: In-order (left-root-right), Pre-order (root-left-right), Post-order (left-right-root), and Level-order (BFS).",
+      "timeComplexity": {
+        "best": "O(n)",
+        "average": "O(n)",
+        "worst": "O(n)"
+      },
+      "spaceComplexity": "O(h)",
+      "code": "function inOrder(node, result = []) {\n  if (node) {\n    inOrder(node.left, result);\n    result.push(node.value);\n    inOrder(node.right, result);\n  }\n  return result;\n}\n\nfunction preOrder(node, result = []) {\n  if (node) {\n    result.push(node.value);\n    preOrder(node.left, result);\n    preOrder(node.right, result);\n  }\n  return result;\n}",
+      "categories": ["trees", "traversal"]
+    },
+    "bst-operations": {
+      "name": "BST Operations",
+      "description": "Binary Search Tree operations: insertion, deletion, and search. BST maintains the property that left subtree contains smaller values and right subtree contains larger values.",
+      "timeComplexity": {
+        "best": "O(log n)",
+        "average": "O(log n)",
+        "worst": "O(n)"
+      },
+      "spaceComplexity": "O(n)",
+      "code": "class BST {\n  insert(node, value) {\n    if (!node) return { value, left: null, right: null };\n    if (value < node.value)\n      node.left = this.insert(node.left, value);\n    else\n      node.right = this.insert(node.right, value);\n    return node;\n  }\n  \n  search(node, value) {\n    if (!node || node.value === value) return node;\n    return value < node.value\n      ? this.search(node.left, value)\n      : this.search(node.right, value);\n  }\n}",
+      "categories": ["trees", "binary-search-tree"]
+    },
+    "avl-tree": {
+      "name": "AVL Tree",
+      "description": "Self-balancing binary search tree where the heights of the two child subtrees of any node differ by at most one. Automatically rebalances after insertions and deletions.",
+      "timeComplexity": {
+        "best": "O(log n)",
+        "average": "O(log n)",
+        "worst": "O(log n)"
+      },
+      "spaceComplexity": "O(n)",
+      "code": "class AVLTree {\n  height(node) {\n    return node ? node.height : 0;\n  }\n  \n  balance(node) {\n    return node ? this.height(node.left) - this.height(node.right) : 0;\n  }\n  \n  rotateRight(y) {\n    const x = y.left;\n    y.left = x.right;\n    x.right = y;\n    y.height = Math.max(this.height(y.left), this.height(y.right)) + 1;\n    x.height = Math.max(this.height(x.left), this.height(x.right)) + 1;\n    return x;\n  }\n}",
+      "categories": ["trees", "balanced", "self-balancing"]
+    }
+  },
+  "graphs": {
+    "bfs": {
+      "name": "Breadth-First Search",
+      "description": "Graph traversal algorithm that explores all vertices at the present depth before moving on to vertices at the next depth level. Uses a queue data structure.",
+      "timeComplexity": {
+        "best": "O(V + E)",
+        "average": "O(V + E)",
+        "worst": "O(V + E)"
+      },
+      "spaceComplexity": "O(V)",
+      "code": "function bfs(graph, start) {\n  const visited = new Set([start]);\n  const queue = [start];\n  const result = [];\n  \n  while (queue.length) {\n    const vertex = queue.shift();\n    result.push(vertex);\n    \n    for (const neighbor of graph[vertex]) {\n      if (!visited.has(neighbor)) {\n        visited.add(neighbor);\n        queue.push(neighbor);\n      }\n    }\n  }\n  return result;\n}",
+      "categories": ["graphs", "traversal"]
+    },
+    "dfs": {
+      "name": "Depth-First Search",
+      "description": "Graph traversal algorithm that explores as far as possible along each branch before backtracking. Can be implemented using recursion or a stack.",
+      "timeComplexity": {
+        "best": "O(V + E)",
+        "average": "O(V + E)",
+        "worst": "O(V + E)"
+      },
+      "spaceComplexity": "O(V)",
+      "code": "function dfs(graph, start, visited = new Set()) {\n  visited.add(start);\n  const result = [start];\n  \n  for (const neighbor of graph[start]) {\n    if (!visited.has(neighbor)) {\n      result.push(...dfs(graph, neighbor, visited));\n    }\n  }\n  return result;\n}",
+      "categories": ["graphs", "traversal"]
+    },
+    "dijkstra": {
+      "name": "Dijkstra's Algorithm",
+      "description": "Algorithm for finding the shortest paths between nodes in a weighted graph. Uses a priority queue to greedily select the closest unvisited node.",
+      "timeComplexity": {
+        "best": "O((V + E) log V)",
+        "average": "O((V + E) log V)",
+        "worst": "O((V + E) log V)"
+      },
+      "spaceComplexity": "O(V)",
+      "code": "function dijkstra(graph, start) {\n  const dist = {};\n  const pq = [[0, start]];\n  \n  for (const v of Object.keys(graph)) dist[v] = Infinity;\n  dist[start] = 0;\n  \n  while (pq.length) {\n    pq.sort((a, b) => a[0] - b[0]);\n    const [d, u] = pq.shift();\n    if (d > dist[u]) continue;\n    \n    for (const [v, w] of graph[u]) {\n      if (dist[u] + w < dist[v]) {\n        dist[v] = dist[u] + w;\n        pq.push([dist[v], v]);\n      }\n    }\n  }\n  return dist;\n}",
+      "categories": ["graphs", "shortest-path", "greedy"]
+    }
+  },
+  "dynamic-programming": {
+    "fibonacci": {
+      "name": "Fibonacci Sequence",
+      "description": "Classic dynamic programming example. Computes the nth Fibonacci number using memoization or tabulation to avoid redundant calculations.",
+      "timeComplexity": {
+        "best": "O(n)",
+        "average": "O(n)",
+        "worst": "O(n)"
+      },
+      "spaceComplexity": "O(n)",
+      "code": "function fibonacci(n, memo = {}) {\n  if (n <= 1) return n;\n  if (memo[n]) return memo[n];\n  memo[n] = fibonacci(n - 1, memo) + fibonacci(n - 2, memo);\n  return memo[n];\n}\n\n// Tabulation approach\nfunction fibonacciTab(n) {\n  const dp = [0, 1];\n  for (let i = 2; i <= n; i++) {\n    dp[i] = dp[i - 1] + dp[i - 2];\n  }\n  return dp[n];\n}",
+      "categories": ["dynamic-programming", "memoization"]
+    },
+    "knapsack": {
+      "name": "0/1 Knapsack",
+      "description": "Given weights and values of n items, find the maximum value that can be put in a knapsack of capacity W. Each item can only be included once.",
+      "timeComplexity": {
+        "best": "O(nW)",
+        "average": "O(nW)",
+        "worst": "O(nW)"
+      },
+      "spaceComplexity": "O(nW)",
+      "code": "function knapsack(weights, values, capacity) {\n  const n = weights.length;\n  const dp = Array(n + 1).fill(null)\n    .map(() => Array(capacity + 1).fill(0));\n  \n  for (let i = 1; i <= n; i++) {\n    for (let w = 0; w <= capacity; w++) {\n      if (weights[i-1] <= w) {\n        dp[i][w] = Math.max(\n          dp[i-1][w],\n          values[i-1] + dp[i-1][w - weights[i-1]]\n        );\n      } else {\n        dp[i][w] = dp[i-1][w];\n      }\n    }\n  }\n  return dp[n][capacity];\n}",
+      "categories": ["dynamic-programming", "optimization"]
+    },
+    "lcs": {
+      "name": "Longest Common Subsequence",
+      "description": "Find the longest subsequence common to two sequences. A subsequence is a sequence that can be derived by deleting some elements without changing the order.",
+      "timeComplexity": {
+        "best": "O(mn)",
+        "average": "O(mn)",
+        "worst": "O(mn)"
+      },
+      "spaceComplexity": "O(mn)",
+      "code": "function lcs(str1, str2) {\n  const m = str1.length, n = str2.length;\n  const dp = Array(m + 1).fill(null)\n    .map(() => Array(n + 1).fill(0));\n  \n  for (let i = 1; i <= m; i++) {\n    for (let j = 1; j <= n; j++) {\n      if (str1[i-1] === str2[j-1]) {\n        dp[i][j] = dp[i-1][j-1] + 1;\n      } else {\n        dp[i][j] = Math.max(dp[i-1][j], dp[i][j-1]);\n      }\n    }\n  }\n  return dp[m][n];\n}",
+      "categories": ["dynamic-programming", "string"]
+    }
+  }
+}
