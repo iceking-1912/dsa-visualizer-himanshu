@@ -43,6 +43,9 @@ export interface CommandOutput {
     currentPath: string[];
     activeAlgorithm: string;
     isPlaying: boolean;
+    isPaused: boolean;
+    animationSpeed: number;
+    arraySize: number;
   }>;
 }
 

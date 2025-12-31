@@ -77,6 +77,9 @@ export default function TerminalEmulator({
   const fitAddonRef = useRef<FitAddon | null>(null);
   const inputBufferRef = useRef<string>('');
   const cursorPositionRef = useRef<number>(0);
+  const outputLengthRef = useRef<number>(0);
+  const awaitingPromptRef = useRef<boolean>(false);
+  const rafIdRef = useRef<number | null>(null);
   const [isReady, setIsReady] = useState(false);
 
   const { executeCommand, currentPath, navigateHistory } = useTerminal();
@@ -121,13 +124,16 @@ export default function TerminalEmulator({
     
     xtermRef.current.write('\r\n');
     
+    awaitingPromptRef.current = true;
+
     if (command.trim()) {
       await executeCommand(command);
       onCommand?.(command);
+    } else {
+      // Trigger loading cycle for empty input so the prompt returns
+      await executeCommand(command);
     }
-    
-    writePrompt();
-  }, [executeCommand, writePrompt, onCommand]);
+  }, [executeCommand, onCommand]);
 
   // Handle tab completion
   const handleTabCompletion = useCallback(() => {
@@ -179,165 +185,231 @@ export default function TerminalEmulator({
   useEffect(() => {
     if (!terminalRef.current || xtermRef.current) return;
 
-    const term = new XTerm({
-      theme: theme === 'dark' ? DARK_THEME : LIGHT_THEME,
-      fontFamily: '"JetBrains Mono", "Fira Code", monospace',
-      fontSize: 14,
-      lineHeight: 1.5,
-      cursorBlink: true,
-      cursorStyle: 'block',
-      scrollback: 1000,
-      allowProposedApi: true,
-    });
+    const container = terminalRef.current;
+    let term: XTerm | null = null;
+    let fitAddon: FitAddon | null = null;
+    let fitTimer: ReturnType<typeof setTimeout> | null = null;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let handleResize: (() => void) | null = null;
+    let isCleanedUp = false;
 
-    const fitAddon = new FitAddon();
-    term.loadAddon(fitAddon);
-
-    term.open(terminalRef.current);
-    fitAddon.fit();
-
-    xtermRef.current = term;
-    fitAddonRef.current = fitAddon;
-
-    // Welcome message
-    term.writeln('\x1b[96m╔══════════════════════════════════════════════════════════╗\x1b[0m');
-    term.writeln('\x1b[96m║\x1b[0m  \x1b[1m\x1b[95mDSA Visualizer\x1b[0m - Interactive Algorithm Visualization   \x1b[96m║\x1b[0m');
-    term.writeln('\x1b[96m╚══════════════════════════════════════════════════════════╝\x1b[0m');
-    term.writeln('');
-    term.writeln("\x1b[2mType 'help' for available commands or 'ls' to list algorithms.\x1b[0m");
-    term.writeln('');
-
-    // Write initial prompt
-    term.write(outputFormatter.commandPrompt(['dsa']));
-
-    // Handle input
-    term.onData((data) => {
-      const code = data.charCodeAt(0);
-
-      // Handle special keys
-      if (data === '\x1b[A') {
-        // Up arrow - history
-        handleHistoryNavigation('up');
-        return;
-      }
-      if (data === '\x1b[B') {
-        // Down arrow - history
-        handleHistoryNavigation('down');
-        return;
-      }
-      if (data === '\x1b[C') {
-        // Right arrow
-        if (cursorPositionRef.current < inputBufferRef.current.length) {
-          cursorPositionRef.current++;
-          term.write(data);
+    const safeFit = () => {
+      if (isCleanedUp || !term || !term.element) return;
+      // Check if the terminal's internal buffer and renderer are ready
+      // @ts-expect-error - accessing internal property to check readiness
+      if (!term._core?._renderService?._renderer) return;
+      try {
+        if (container && container.clientWidth > 0 && container.clientHeight > 0 && fitAddon) {
+          fitAddon.fit();
         }
-        return;
-      }
-      if (data === '\x1b[D') {
-        // Left arrow
-        if (cursorPositionRef.current > 0) {
-          cursorPositionRef.current--;
-          term.write(data);
-        }
-        return;
-      }
-      if (data === '\x1b[3~') {
-        // Delete key
-        if (cursorPositionRef.current < inputBufferRef.current.length) {
-          inputBufferRef.current =
-            inputBufferRef.current.slice(0, cursorPositionRef.current) +
-            inputBufferRef.current.slice(cursorPositionRef.current + 1);
-          refreshLine();
-        }
-        return;
-      }
-
-      // Tab - auto-complete
-      if (code === 9) {
-        handleTabCompletion();
-        return;
-      }
-
-      // Enter - execute
-      if (code === 13) {
-        handleExecute();
-        return;
-      }
-
-      // Backspace
-      if (code === 127 || code === 8) {
-        if (cursorPositionRef.current > 0) {
-          inputBufferRef.current =
-            inputBufferRef.current.slice(0, cursorPositionRef.current - 1) +
-            inputBufferRef.current.slice(cursorPositionRef.current);
-          cursorPositionRef.current--;
-          refreshLine();
-        }
-        return;
-      }
-
-      // Ctrl+C - cancel
-      if (code === 3) {
-        inputBufferRef.current = '';
-        cursorPositionRef.current = 0;
-        term.write('^C\r\n');
-        writePrompt();
-        return;
-      }
-
-      // Ctrl+L - clear
-      if (code === 12) {
-        term.clear();
-        writePrompt();
-        term.write(inputBufferRef.current);
-        return;
-      }
-
-      // Ctrl+U - clear line
-      if (code === 21) {
-        inputBufferRef.current = '';
-        cursorPositionRef.current = 0;
-        refreshLine();
-        return;
-      }
-
-      // Ctrl+W - delete word
-      if (code === 23) {
-        const beforeCursor = inputBufferRef.current.slice(0, cursorPositionRef.current);
-        const afterCursor = inputBufferRef.current.slice(cursorPositionRef.current);
-        const newBefore = beforeCursor.replace(/\S+\s*$/, '');
-        inputBufferRef.current = newBefore + afterCursor;
-        cursorPositionRef.current = newBefore.length;
-        refreshLine();
-        return;
-      }
-
-      // Regular character input
-      if (code >= 32 && code < 127) {
-        inputBufferRef.current =
-          inputBufferRef.current.slice(0, cursorPositionRef.current) +
-          data +
-          inputBufferRef.current.slice(cursorPositionRef.current);
-        cursorPositionRef.current++;
-        refreshLine();
-      }
-    });
-
-    // Handle resize
-    const handleResize = () => {
-      if (fitAddonRef.current) {
-        fitAddonRef.current.fit();
+      } catch (err) {
+        // Silently ignore fit errors
       }
     };
 
-    window.addEventListener('resize', handleResize);
+    // Wait for container to have dimensions before initializing
+    const initTerminal = () => {
+      if (isCleanedUp) return;
+      
+      if (!container || container.clientWidth === 0 || container.clientHeight === 0) {
+        // Container not ready yet, try again after a short delay
+        retryTimer = setTimeout(initTerminal, 50);
+        return;
+      }
 
-    // Mark as ready after a microtask to avoid sync setState in effect
-    Promise.resolve().then(() => setIsReady(true));
+      term = new XTerm({
+        theme: theme === 'dark' ? DARK_THEME : LIGHT_THEME,
+        fontFamily: '"JetBrains Mono", "Fira Code", monospace',
+        fontSize: 14,
+        lineHeight: 1.5,
+        cursorBlink: true,
+        cursorStyle: 'block',
+        scrollback: 1000,
+        allowProposedApi: true,
+      });
+
+      fitAddon = new FitAddon();
+      term.loadAddon(fitAddon);
+
+      try {
+        term.open(container);
+      } catch (err) {
+        console.warn('Terminal open failed, will retry:', err);
+        term.dispose();
+        term = null;
+        fitAddon = null;
+        // Retry after a delay
+        retryTimer = setTimeout(initTerminal, 100);
+        return;
+      }
+
+      // Defer fit until terminal is fully initialized
+      fitTimer = setTimeout(safeFit, 50);
+      rafIdRef.current = requestAnimationFrame(() => {
+        setTimeout(safeFit, 100);
+      });
+
+      xtermRef.current = term;
+      fitAddonRef.current = fitAddon;
+
+      // Welcome message
+      term.writeln('\x1b[96m╔══════════════════════════════════════════════════════════╗\x1b[0m');
+      term.writeln('\x1b[96m║\x1b[0m  \x1b[1m\x1b[95mDSA Visualizer\x1b[0m - Interactive Algorithm Visualization   \x1b[96m║\x1b[0m');
+      term.writeln('\x1b[96m╚══════════════════════════════════════════════════════════╝\x1b[0m');
+      term.writeln('');
+      term.writeln("\x1b[2mType 'help' for available commands or 'ls' to list algorithms.\x1b[0m");
+      term.writeln('');
+
+      // Write initial prompt
+      term.write(getPrompt());
+
+      // Capture term for closure
+      const currentTerm = term;
+
+      // Handle input
+      currentTerm.onData((data) => {
+        const code = data.charCodeAt(0);
+
+        // Handle special keys
+        if (data === '\x1b[A') {
+          // Up arrow - history
+          handleHistoryNavigation('up');
+          return;
+        }
+        if (data === '\x1b[B') {
+          // Down arrow - history
+          handleHistoryNavigation('down');
+          return;
+        }
+        if (data === '\x1b[C') {
+          // Right arrow
+          if (cursorPositionRef.current < inputBufferRef.current.length) {
+            cursorPositionRef.current++;
+            currentTerm.write(data);
+          }
+          return;
+        }
+        if (data === '\x1b[D') {
+          // Left arrow
+          if (cursorPositionRef.current > 0) {
+            cursorPositionRef.current--;
+            currentTerm.write(data);
+          }
+          return;
+        }
+        if (data === '\x1b[3~') {
+          // Delete key
+          if (cursorPositionRef.current < inputBufferRef.current.length) {
+            inputBufferRef.current =
+              inputBufferRef.current.slice(0, cursorPositionRef.current) +
+              inputBufferRef.current.slice(cursorPositionRef.current + 1);
+            refreshLine();
+          }
+          return;
+        }
+
+        // Tab - auto-complete
+        if (code === 9) {
+          handleTabCompletion();
+          return;
+        }
+
+        // Enter - execute
+        if (code === 13) {
+          handleExecute();
+          return;
+        }
+
+        // Backspace
+        if (code === 127 || code === 8) {
+          if (cursorPositionRef.current > 0) {
+            inputBufferRef.current =
+              inputBufferRef.current.slice(0, cursorPositionRef.current - 1) +
+              inputBufferRef.current.slice(cursorPositionRef.current);
+            cursorPositionRef.current--;
+            refreshLine();
+          }
+          return;
+        }
+
+        // Ctrl+C - cancel
+        if (code === 3) {
+          inputBufferRef.current = '';
+          cursorPositionRef.current = 0;
+          currentTerm.write('^C\r\n');
+          writePrompt();
+          return;
+        }
+
+        // Ctrl+L - clear
+        if (code === 12) {
+          currentTerm.clear();
+          writePrompt();
+          currentTerm.write(inputBufferRef.current);
+          return;
+        }
+
+        // Ctrl+U - clear line
+        if (code === 21) {
+          inputBufferRef.current = '';
+          cursorPositionRef.current = 0;
+          refreshLine();
+          return;
+        }
+
+        // Ctrl+W - delete word
+        if (code === 23) {
+          const beforeCursor = inputBufferRef.current.slice(0, cursorPositionRef.current);
+          const afterCursor = inputBufferRef.current.slice(cursorPositionRef.current);
+          const newBefore = beforeCursor.replace(/\S+\s*$/, '');
+          inputBufferRef.current = newBefore + afterCursor;
+          cursorPositionRef.current = newBefore.length;
+          refreshLine();
+          return;
+        }
+
+        // Regular character input
+        if (code >= 32 && code < 127) {
+          inputBufferRef.current =
+            inputBufferRef.current.slice(0, cursorPositionRef.current) +
+            data +
+            inputBufferRef.current.slice(cursorPositionRef.current);
+          cursorPositionRef.current++;
+          refreshLine();
+        }
+      });
+
+      // Handle resize
+      handleResize = () => {
+        safeFit();
+      };
+
+      window.addEventListener('resize', handleResize);
+
+      // Mark as ready after a microtask to avoid sync setState in effect
+      Promise.resolve().then(() => setIsReady(true));
+    };
+
+    // Start initialization
+    initTerminal();
 
     return () => {
-      window.removeEventListener('resize', handleResize);
-      term.dispose();
+      isCleanedUp = true;
+      if (handleResize) {
+        window.removeEventListener('resize', handleResize);
+      }
+      if (fitTimer) {
+        clearTimeout(fitTimer);
+      }
+      if (retryTimer) {
+        clearTimeout(retryTimer);
+      }
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+      }
+      if (term) {
+        term.dispose();
+      }
       xtermRef.current = null;
       fitAddonRef.current = null;
     };
@@ -347,10 +419,30 @@ export default function TerminalEmulator({
   // Update terminal when output changes from hooks
   useEffect(() => {
     if (!xtermRef.current || !isReady) return;
-    
-    // The output is now handled through the hook
-    // This effect can be used for additional output handling if needed
+
+    const output = terminalStore.output;
+
+    // Reset when output is cleared
+    if (output.length < outputLengthRef.current) {
+      xtermRef.current.clear();
+      outputLengthRef.current = 0;
+    }
+
+    const diff = output.slice(outputLengthRef.current);
+    if (diff) {
+      xtermRef.current.write(diff);
+      outputLengthRef.current = output.length;
+    }
   }, [terminalStore.output, isReady]);
+
+  useEffect(() => {
+    if (!xtermRef.current || !isReady) return;
+
+    if (!terminalStore.isLoading && awaitingPromptRef.current) {
+      writePrompt();
+      awaitingPromptRef.current = false;
+    }
+  }, [terminalStore.isLoading, isReady, writePrompt]);
 
   // Update prompt when path changes
   useEffect(() => {

@@ -3,6 +3,7 @@ import type { AlgorithmData, TreeNode } from '@/types/app';
 import { outputFormatter } from './output-formatter';
 import { findClosestMatch, kebabToTitle } from './utils';
 import algorithmsData from '@/data/algorithms.json';
+import { getCanvasCommandExecutor, getSortingAlgorithmNames } from './canvas';
 
 // Cast the imported JSON to proper type
 const algorithms = algorithmsData as unknown as AlgorithmData;
@@ -492,7 +493,22 @@ class CommandRegistry {
 
         const speed = (options.speed || options.s || 5) as number;
         const mode = (options.mode || options.m || 'continuous') as string;
-        const size = (options.size || options.n || 100) as number;
+        const size = (options.size || options.n || 50) as number;
+
+        // Execute visualization through canvas command executor
+        const executor = getCanvasCommandExecutor();
+        
+        // Start visualization asynchronously
+        executor.executeRun(algo.id, {
+          speed: Math.max(1, Math.min(10, speed)),
+          mode: mode as 'step' | 'continuous',
+          inputSize: Math.max(10, Math.min(500, size)),
+        }).then((result) => {
+          // Result will be handled by the onComplete callback
+          console.log(`Visualization completed: ${result.totalComparisons} comparisons, ${result.totalSwaps} swaps`);
+        }).catch((error) => {
+          console.error('Visualization error:', error);
+        });
 
         const lines = [
           outputFormatter.success(`Starting visualization: ${algo.data.name}`),
@@ -500,7 +516,7 @@ class CommandRegistry {
           outputFormatter.keyValue('Mode', mode),
           outputFormatter.keyValue('Array Size', size.toString()),
           '',
-          outputFormatter.dim('(Visualization would start in the canvas area)'),
+          outputFormatter.dim('Use "pause", "stop", "resume", or "speed <1-10>" to control'),
         ];
 
         return {
@@ -523,6 +539,9 @@ class CommandRegistry {
       options: [],
       examples: ['stop'],
       execute: async (): Promise<CommandOutput> => {
+        const executor = getCanvasCommandExecutor();
+        executor.executeStop();
+        
         return {
           success: true,
           output: outputFormatter.warning('Visualization stopped'),
@@ -540,9 +559,13 @@ class CommandRegistry {
       options: [],
       examples: ['pause'],
       execute: async (): Promise<CommandOutput> => {
+        const executor = getCanvasCommandExecutor();
+        executor.executePause();
+        
         return {
           success: true,
           output: outputFormatter.warning('Visualization paused'),
+          updateState: { isPaused: true },
         };
       },
     });
@@ -556,9 +579,13 @@ class CommandRegistry {
       options: [],
       examples: ['resume'],
       execute: async (): Promise<CommandOutput> => {
+        const executor = getCanvasCommandExecutor();
+        executor.executeResume();
+        
         return {
           success: true,
           output: outputFormatter.success('Visualization resumed'),
+          updateState: { isPaused: false },
         };
       },
     });
@@ -573,9 +600,99 @@ class CommandRegistry {
       examples: ['step', 'step 5'],
       execute: async (args): Promise<CommandOutput> => {
         const count = parseInt(args.positional[0]) || 1;
+        const executor = getCanvasCommandExecutor();
+        
+        for (let i = 0; i < count; i++) {
+          executor.executeStep();
+        }
+        
         return {
           success: true,
           output: outputFormatter.info(`Stepped forward ${count} step(s)`),
+        };
+      },
+    });
+
+    // ===== speed command =====
+    this.register({
+      name: 'speed',
+      aliases: [],
+      description: 'Set visualization speed',
+      syntax: 'speed [1-10]',
+      options: [],
+      examples: ['speed 5', 'speed 10'],
+      execute: async (args): Promise<CommandOutput> => {
+        const speedValue = parseInt(args.positional[0]);
+        
+        if (isNaN(speedValue) || speedValue < 1 || speedValue > 10) {
+          return {
+            success: false,
+            output: outputFormatter.error('Speed must be between 1 and 10'),
+          };
+        }
+        
+        const executor = getCanvasCommandExecutor();
+        executor.setSpeed(speedValue);
+        
+        return {
+          success: true,
+          output: outputFormatter.success(`Speed set to ${speedValue}/10`),
+          updateState: { animationSpeed: speedValue },
+        };
+      },
+    });
+
+    // ===== generate command =====
+    this.register({
+      name: 'generate',
+      aliases: ['gen', 'new'],
+      description: 'Generate a new random array',
+      syntax: 'generate [size]',
+      options: [],
+      examples: ['generate', 'generate 100'],
+      execute: async (args): Promise<CommandOutput> => {
+        const size = parseInt(args.positional[0]) || 50;
+        
+        if (size < 10 || size > 500) {
+          return {
+            success: false,
+            output: outputFormatter.error('Array size must be between 10 and 500'),
+          };
+        }
+        
+        const executor = getCanvasCommandExecutor();
+        executor.generateArray(size);
+        
+        return {
+          success: true,
+          output: outputFormatter.success(`Generated new array with ${size} elements`),
+          updateState: { arraySize: size },
+        };
+      },
+    });
+
+    // ===== algorithms command =====
+    this.register({
+      name: 'algorithms',
+      aliases: ['algos', 'list-algorithms'],
+      description: 'List all available sorting algorithms',
+      syntax: 'algorithms',
+      options: [],
+      examples: ['algorithms'],
+      execute: async (): Promise<CommandOutput> => {
+        const algos = getSortingAlgorithmNames();
+        
+        const lines = [
+          outputFormatter.success('Available Sorting Algorithms:'),
+          '',
+          ...algos.map((name) => `  • ${kebabToTitle(name)}`),
+          '',
+          outputFormatter.dim('Use "run <algorithm>" to start visualization'),
+        ];
+        
+        return {
+          success: true,
+          output: lines.join('\r\n'),
         };
       },
     });

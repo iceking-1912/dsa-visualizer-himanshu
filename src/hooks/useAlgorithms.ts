@@ -179,54 +179,54 @@ export function useAlgorithms(): UseAlgorithmsReturn {
   }, [getDelay, shouldContinue, waitWhilePaused]);
 
   // Quick Sort Algorithm
-  const quickSort = useCallback(async (
-    arr: Bar[],
-    low: number,
-    high: number,
-    steps: AnimationStep[],
-    stats: { comparisons: number; swaps: number }
-  ): Promise<void> => {
-    if (low < high && shouldContinue()) {
-      const pivot = arr[high].value;
-      let i = low - 1;
+    const quickSort = useCallback(async function quickSortInner(
+      arr: Bar[],
+      low: number,
+      high: number,
+      steps: AnimationStep[],
+      stats: { comparisons: number; swaps: number }
+    ): Promise<void> {
+      if (low < high && shouldContinue()) {
+        const pivot = arr[high].value;
+        let i = low - 1;
 
-      steps.push({ type: 'highlight', indices: [high], message: `Pivot: ${pivot}` });
+        steps.push({ type: 'highlight', indices: [high], message: `Pivot: ${pivot}` });
 
-      for (let j = low; j < high; j++) {
-        if (!shouldContinue()) break;
-        await waitWhilePaused();
+        for (let j = low; j < high; j++) {
+          if (!shouldContinue()) break;
+          await waitWhilePaused();
 
-        steps.push({ type: 'compare', indices: [j, high] });
-        stats.comparisons++;
-        setComparisons(stats.comparisons);
+          steps.push({ type: 'compare', indices: [j, high] });
+          stats.comparisons++;
+          setComparisons(stats.comparisons);
 
-        if (arr[j].value < pivot) {
-          i++;
-          if (i !== j) {
-            steps.push({ type: 'swap', indices: [i, j] });
-            [arr[i], arr[j]] = [arr[j], arr[i]];
-            stats.swaps++;
-            setSwaps(stats.swaps);
+          if (arr[j].value < pivot) {
+            i++;
+            if (i !== j) {
+              steps.push({ type: 'swap', indices: [i, j] });
+              [arr[i], arr[j]] = [arr[j], arr[i]];
+              stats.swaps++;
+              setSwaps(stats.swaps);
+            }
           }
+
+          setCurrentStep(steps.length);
+          await delay(getDelay());
         }
 
-        setCurrentStep(steps.length);
-        await delay(getDelay());
+        // Place pivot in correct position
+        steps.push({ type: 'swap', indices: [i + 1, high] });
+        [arr[i + 1], arr[high]] = [arr[high], arr[i + 1]];
+        stats.swaps++;
+        setSwaps(stats.swaps);
+
+        const pivotIndex = i + 1;
+        steps.push({ type: 'sorted', indices: [pivotIndex] });
+
+        await quickSortInner(arr, low, pivotIndex - 1, steps, stats);
+        await quickSortInner(arr, pivotIndex + 1, high, steps, stats);
       }
-
-      // Place pivot in correct position
-      steps.push({ type: 'swap', indices: [i + 1, high] });
-      [arr[i + 1], arr[high]] = [arr[high], arr[i + 1]];
-      stats.swaps++;
-      setSwaps(stats.swaps);
-
-      const pivotIndex = i + 1;
-      steps.push({ type: 'sorted', indices: [pivotIndex] });
-
-      await quickSort(arr, low, pivotIndex - 1, steps, stats);
-      await quickSort(arr, pivotIndex + 1, high, steps, stats);
-    }
-  }, [getDelay, shouldContinue, waitWhilePaused]);
+    }, [getDelay, shouldContinue, waitWhilePaused]);
 
   // Run algorithm by ID
   const runAlgorithm = useCallback(async (algorithmId: string): Promise<AlgorithmResult | null> => {

@@ -33,6 +33,24 @@ export class AutoCompleter {
           });
         }
       }
+      
+      // Also check aliases
+      const allCommands = commandRegistry.getCommandNames();
+      for (const cmdName of allCommands) {
+        const cmd = commandRegistry.get(cmdName);
+        if (cmd) {
+          for (const alias of cmd.aliases) {
+            if (alias.startsWith(prefix) && alias !== cmdName) {
+              suggestions.push({
+                text: alias,
+                type: 'command',
+                description: `${cmd.description} (alias for ${cmdName})`,
+                icon: '⌘',
+              });
+            }
+          }
+        }
+      }
     } else {
       // Completing arguments
       const command = parts[0].toLowerCase();
@@ -66,13 +84,53 @@ export class AutoCompleter {
           }
         }
       } else {
-        // Complete file paths/algorithms
-        const pathSuggestions = this.getPathSuggestions(lastPart, context);
-        suggestions.push(...pathSuggestions);
+        // Complete file paths/algorithms based on the command
+        if (command === 'run' || command === 'r') {
+          // For 'run' command, suggest algorithm names directly
+          const algoSuggestions = this.getAlgorithmSuggestions(lastPart);
+          suggestions.push(...algoSuggestions);
+        } else if (command === 'cd' || command === 'ls' || command === 'cat' || command === 'open') {
+          // For navigation commands, suggest paths
+          const pathSuggestions = this.getPathSuggestions(lastPart, context);
+          suggestions.push(...pathSuggestions);
+        } else {
+          // Default to path suggestions
+          const pathSuggestions = this.getPathSuggestions(lastPart, context);
+          suggestions.push(...pathSuggestions);
+        }
       }
     }
 
-    return suggestions.slice(0, 10); // Limit suggestions
+    // Remove duplicates and limit
+    const seen = new Set<string>();
+    return suggestions.filter(s => {
+      if (seen.has(s.text)) return false;
+      seen.add(s.text);
+      return true;
+    }).slice(0, 10);
+  }
+
+  /**
+   * Gets algorithm name suggestions for the 'run' command
+   */
+  private getAlgorithmSuggestions(prefix: string): Suggestion[] {
+    const suggestions: Suggestion[] = [];
+    const lowerPrefix = prefix.toLowerCase();
+
+    for (const [category, algos] of Object.entries(algorithms)) {
+      for (const [algoId, algoData] of Object.entries(algos)) {
+        if (algoId.toLowerCase().startsWith(lowerPrefix)) {
+          suggestions.push({
+            text: algoId,
+            type: 'file',
+            description: `${algoData.name} (${category})`,
+            icon: '▶',
+          });
+        }
+      }
+    }
+
+    return suggestions;
   }
 
   /**
@@ -82,6 +140,16 @@ export class AutoCompleter {
     const suggestions: Suggestion[] = [];
     const lowerPrefix = prefix.toLowerCase();
     const currentPathWithoutDsa = context.currentPath.filter((p) => p !== 'dsa');
+
+    // Handle ".." for parent directory
+    if ('..'.startsWith(prefix) && currentPathWithoutDsa.length > 0) {
+      suggestions.push({
+        text: '..',
+        type: 'file',
+        description: 'Parent directory',
+        icon: '⬆',
+      });
+    }
 
     if (currentPathWithoutDsa.length === 0) {
       // At root - suggest categories
@@ -113,19 +181,21 @@ export class AutoCompleter {
       }
     }
 
-    // Also suggest algorithms by name match
-    for (const [category, algos] of Object.entries(algorithms)) {
-      for (const [algoId, algoData] of Object.entries(algos)) {
-        if (
-          algoId.toLowerCase().startsWith(lowerPrefix) &&
-          !suggestions.some((s) => s.text === algoId)
-        ) {
-          suggestions.push({
-            text: algoId,
-            type: 'file',
-            description: `${algoData.name} (${category})`,
-            icon: '📄',
-          });
+    // Also suggest algorithms by name match from any category (for convenience)
+    if (!prefix.includes('/')) {
+      for (const [category, algos] of Object.entries(algorithms)) {
+        for (const [algoId, algoData] of Object.entries(algos)) {
+          if (
+            algoId.toLowerCase().startsWith(lowerPrefix) &&
+            !suggestions.some((s) => s.text === algoId)
+          ) {
+            suggestions.push({
+              text: algoId,
+              type: 'file',
+              description: `${algoData.name} (${category})`,
+              icon: '📄',
+            });
+          }
         }
       }
     }

@@ -1,9 +1,10 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useTerminalStore } from '@/stores/terminal.store';
 import { useSettingsStore } from '@/stores/settings.store';
 import { useAppStore } from '@/stores/app.store';
+import { useExplorerStore } from '@/stores/explorer.store';
 import { commandParser } from '@/lib/cli-parser';
 import { commandRegistry } from '@/lib/commands';
 import { outputFormatter } from '@/lib/output-formatter';
@@ -37,6 +38,29 @@ export function useTerminal(): UseTerminalReturn {
 
   const settings = useSettingsStore();
   const appStore = useAppStore();
+  const setExplorerPath = useExplorerStore(state => state.setCurrentPath);
+  const expandNode = useExplorerStore(state => state.expandNode);
+  
+  // Track last synced path to prevent infinite loops
+  const lastSyncedPathRef = useRef<string>('');
+
+  // Sync terminal path with file explorer (one-way: terminal -> explorer)
+  useEffect(() => {
+    // Convert terminal path (e.g., ['dsa', 'sorting']) to explorer path format
+    const terminalPathWithoutDsa = currentPath.filter(p => p !== 'dsa');
+    const pathKey = JSON.stringify(terminalPathWithoutDsa);
+    
+    // Only update if paths are actually different to prevent infinite loops
+    if (pathKey !== lastSyncedPathRef.current) {
+      lastSyncedPathRef.current = pathKey;
+      setExplorerPath(terminalPathWithoutDsa);
+      
+      // Expand nodes in path
+      terminalPathWithoutDsa.forEach(segment => {
+        expandNode(segment);
+      });
+    }
+  }, [currentPath, setExplorerPath, expandNode]);
 
   const getPrompt = useCallback(() => {
     return outputFormatter.commandPrompt(currentPath);
@@ -45,11 +69,11 @@ export function useTerminal(): UseTerminalReturn {
   const executeCommand = useCallback(
     async (input: string): Promise<void> => {
       const trimmedInput = input.trim();
-      
-      // Echo the command
-      appendOutput(getPrompt() + trimmedInput + '\r\n');
+      setLoading(true);
 
       if (!trimmedInput) {
+        // Empty command still needs to release the loading flag
+        setLoading(false);
         return;
       }
 
@@ -62,12 +86,14 @@ export function useTerminal(): UseTerminalReturn {
 
       if (!validation.valid) {
         appendOutput(outputFormatter.error(validation.error || 'Invalid command') + '\r\n');
+        setLoading(false);
         return;
       }
 
       // Check for special clear command
       if (parsed.command === 'clear' || parsed.command === 'cls') {
         clearOutput();
+        setLoading(false);
         return;
       }
 
@@ -87,8 +113,6 @@ export function useTerminal(): UseTerminalReturn {
 
       // Parse arguments
       const args = commandParser.parseArgs(parsed.args);
-
-      setLoading(true);
 
       try {
         const result = await commandRegistry.execute(parsed.command, args, context);
@@ -125,7 +149,6 @@ export function useTerminal(): UseTerminalReturn {
       clearOutput,
       setLoading,
       setCurrentPath,
-      getPrompt,
       appStore,
     ]
   );

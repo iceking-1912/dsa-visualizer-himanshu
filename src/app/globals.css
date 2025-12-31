@@ -129,6 +129,294 @@ body {
   animation: slideUp 0.3s ease-out;
 }
 
+/* ==========================================
+   Phase 4: File Explorer & Sidebar Styles
+   ========================================== */
+
+/* Sidebar slide-in animations */
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutLeft {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+.sidebar-left-enter {
+  animation: slideInLeft 0.3s ease-out forwards;
+}
+
+.sidebar-left-exit {
+  animation: slideOutLeft 0.3s ease-out forwards;
+}
+
+.sidebar-right-enter {
+  animation: slideInRight 0.3s ease-out forwards;
+}
+
+.sidebar-right-exit {
+  animation: slideOutRight 0.3s ease-out forwards;
+}
+
+/* Node expand/collapse animation */
+@keyframes expandNode {
+  from {
+    max-height: 0;
+    opacity: 0;
+  }
+  to {
+    max-height: 1000px;
+    opacity: 1;
+  }
+}
+
+@keyframes collapseNode {
+  from {
+    max-height: 1000px;
+    opacity: 1;
+  }
+  to {
+    max-height: 0;
+    opacity: 0;
+  }
+}
+
+.file-node-children-enter {
+  animation: expandNode 0.2s ease-out forwards;
+  overflow: hidden;
+}
+
+.file-node-children-exit {
+  animation: collapseNode 0.2s ease-out forwards;
+  overflow: hidden;
+}
+
+/* File tree selection styles */
+.file-tree-node {
+  padding: 0.375rem 0.5rem;
+  border-left: 3px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease-out;
+}
+
+.file-tree-node:hover {
+  background-color: #1e1e1e;
+  border-left-color: rgba(0, 212, 255, 0.5);
+}
+
+.file-tree-node.selected {
+  background-color: #252525;
+  border-left-color: #00d4ff;
+  font-weight: 500;
+}
+
+.file-tree-node.focused {
+  box-shadow: inset 0 0 0 1px rgba(0, 212, 255, 0.5);
+}
+
+/* Complexity bar animation */
+@keyframes growBar {
+  from {
+    width: 0;
+  }
+}
+
+.complexity-bar {
+  animation: growBar 0.5s ease-out forwards;
+}
+
+/* Button pulse animation */
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(0, 212, 255, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(0, 212, 255, 0);
+  }
+}
+
+.btn-pulse {
+  animation: pulse 2s infinite;
+}
+
+/* Status indicator pulse */
+@keyframes statusPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.status-pulse {
+  animation: statusPulse 1.5s ease-in-out infinite;
+}
+
+/* Responsive breakpoint utilities */
+@media (max-width: 1200px) {
+  .hide-tablet {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .hide-mobile {
+    display: none;
+  }
+  
+  .show-mobile {
+    display: block;
+  }
+}
+
+@media (min-width: 769px) {
+  .show-mobile {
+    display: none;
+  }
+}
+
+/* Border-left width utility */
+.border-l-3 {
+  border-left-width: 3px;
+}
+
+/* Focus visible styles for accessibility */
+.focus-visible-ring:focus-visible {
+  outline: 2px solid #00d4ff;
+  outline-offset: 2px;
+}
+
+/* Scrollbar styling for file tree */
+.file-tree-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.file-tree-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.file-tree-scroll::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 3px;
+}
+
+.file-tree-scroll::-webkit-scrollbar-thumb:hover {
+  background: #444;
+}
+
+/* Code block styling */
+.code-preview {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  tab-size: 2;
+}
+
+.code-preview .keyword {
+  color: #ff79c6;
+}
+
+.code-preview .function {
+  color: #50fa7b;
+}
+
+.code-preview .string {
+  color: #f1fa8c;
+}
+
+.code-preview .comment {
+  color: #6272a4;
+}
+
+.code-preview .number {
+  color: #bd93f9;
+}
+
+/* Glass effect for overlays */
+.glass-overlay {
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* Settings toggle switch */
+.toggle-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.toggle-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-track {
+  width: 48px;
+  height: 24px;
+  background: #333;
+  border-radius: 12px;
+  transition: background 0.2s;
+}
+
+.toggle-switch input:checked + .toggle-track {
+  background: #00d4ff;
+}
+
+.toggle-thumb {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 16px;
+  height: 16px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+
+.toggle-switch input:checked ~ .toggle-thumb {
+  transform: translateX(24px);
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
