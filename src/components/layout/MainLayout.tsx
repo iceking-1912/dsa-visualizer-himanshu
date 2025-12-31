@@ -1,20 +1,22 @@
 'use client';
 
 import { ReactNode, useEffect } from 'react';
+import { useExplorerStore } from '@/stores/explorer.store';
+import Header from './Header';
+import LeftSidebar from './LeftSidebar';
+import RightSidebar from './RightSidebar';
 
 interface MainLayoutProps {
   children: ReactNode;
-  sidebar?: ReactNode;
-  rightPanel?: ReactNode;
   terminal?: ReactNode;
 }
 
 export default function MainLayout({
   children,
-  sidebar,
-  rightPanel,
   terminal,
 }: MainLayoutProps) {
+  const { leftSidebarOpen, rightSidebarOpen, toggleLeftSidebar, toggleRightSidebar } = useExplorerStore();
+
   useEffect(() => {
     // Preload JetBrains Mono font
     const link = document.createElement('link');
@@ -28,89 +30,69 @@ export default function MainLayout({
     };
   }, []);
 
+  // Handle keyboard shortcuts for sidebars
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + B to toggle left sidebar
+      if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+        e.preventDefault();
+        toggleLeftSidebar();
+      }
+      // Ctrl/Cmd + Shift + B to toggle right sidebar
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'B') {
+        e.preventDefault();
+        toggleRightSidebar();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [toggleLeftSidebar, toggleRightSidebar]);
+
   return (
     <div className="h-screen w-screen flex flex-col bg-[#0a0a0a] overflow-hidden">
       {/* Top Bar */}
-      <header className="h-12 bg-[#1a1a1a] border-b border-[#00d4ff]/20 flex items-center justify-between px-6 flex-shrink-0">
-        <h1 className="text-xl font-semibold text-[#00d4ff] hacker-glow">
-          DSA Visualizer
-        </h1>
-        <div className="flex items-center gap-4 text-sm text-[#a0a0a0]">
-          <span className="text-[#00ff88]">●</span>
-          <span>Ready</span>
-        </div>
-      </header>
+      <Header />
 
-      {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
+      {/* Main Content Area */}
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Mobile Overlay */}
+        {(leftSidebarOpen || rightSidebarOpen) && (
+          <div
+            className="lg:hidden fixed inset-0 bg-black/50 z-40"
+            onClick={() => {
+              if (leftSidebarOpen) toggleLeftSidebar();
+              if (rightSidebarOpen) toggleRightSidebar();
+            }}
+          />
+        )}
+
         {/* Left Sidebar - File Explorer */}
-        <aside className="w-72 bg-[#1a1a1a] border-r border-[#00d4ff]/10 overflow-auto flex-shrink-0">
-          {sidebar || (
-            <div className="p-4 text-[#a0a0a0]">
-              <div className="text-xs uppercase tracking-wider text-[#00d4ff] mb-4">
-                Algorithms
-              </div>
-              <div className="space-y-1">
-                <div className="text-sm py-1 px-2 rounded hover:bg-[#252525] cursor-pointer">
-                  📁 Sorting
-                </div>
-                <div className="text-sm py-1 px-2 rounded hover:bg-[#252525] cursor-pointer">
-                  📁 Searching
-                </div>
-                <div className="text-sm py-1 px-2 rounded hover:bg-[#252525] cursor-pointer">
-                  📁 Trees
-                </div>
-                <div className="text-sm py-1 px-2 rounded hover:bg-[#252525] cursor-pointer">
-                  📁 Graphs
-                </div>
-                <div className="text-sm py-1 px-2 rounded hover:bg-[#252525] cursor-pointer">
-                  📁 Dynamic Programming
-                </div>
-              </div>
-            </div>
-          )}
-        </aside>
+        <div
+          className={`
+            fixed lg:relative z-50 lg:z-auto h-[calc(100vh-3rem-16rem)] lg:h-auto
+            transition-transform duration-300 ease-out
+            ${leftSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0 lg:hidden'}
+          `}
+        >
+          <LeftSidebar isOpen={leftSidebarOpen} onClose={toggleLeftSidebar} />
+        </div>
 
         {/* Center Canvas */}
-        <main className="flex-1 bg-[#0a0a0a] relative overflow-hidden">
+        <main className="flex-1 bg-[#0a0a0a] relative overflow-hidden min-w-0 min-h-[300px]">
           {children}
         </main>
 
-        {/* Right Sidebar - Tools & Settings */}
-        <aside className="w-80 bg-[#1a1a1a] border-l border-[#00d4ff]/10 overflow-auto flex-shrink-0">
-          {rightPanel || (
-            <div className="p-4 text-[#a0a0a0]">
-              <div className="text-xs uppercase tracking-wider text-[#00d4ff] mb-4">
-                Controls
-              </div>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm text-[#e0e0e0]">Array Size</label>
-                  <input
-                    type="range"
-                    min="10"
-                    max="200"
-                    defaultValue="100"
-                    className="w-full accent-[#00d4ff]"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm text-[#e0e0e0]">Speed</label>
-                  <input
-                    type="range"
-                    min="1"
-                    max="10"
-                    defaultValue="5"
-                    className="w-full accent-[#00d4ff]"
-                  />
-                </div>
-                <button className="w-full py-2 bg-[#00d4ff] text-[#0a0a0a] font-semibold rounded hover:bg-[#00b4df] transition-colors">
-                  Start Visualization
-                </button>
-              </div>
-            </div>
-          )}
-        </aside>
+        {/* Right Sidebar - Details & Settings */}
+        <div
+          className={`
+            fixed lg:relative right-0 z-50 lg:z-auto h-[calc(100vh-3rem-16rem)] lg:h-auto
+            transition-transform duration-300 ease-out
+            ${rightSidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0 lg:hidden'}
+          `}
+        >
+          <RightSidebar isOpen={rightSidebarOpen} onClose={toggleRightSidebar} />
+        </div>
       </div>
 
       {/* Bottom Terminal */}
